@@ -1,22 +1,36 @@
 import datetime
+from dateutil.relativedelta import relativedelta
 import csv
-from typing import Dict, List
 
-def read_product_data(file_path: str) -> List[Dict[str, str]]:
-    with open(file_path, 'r') as file:
+def read_data(filename, product_name):
+    data = []
+    today = datetime.date.today()
+    last_month_date = today - relativedelta(months=1)
+
+    with open(filename, 'r') as file:
         reader = csv.reader(file)
-        product_data = [
-            {'product_name': row[0], 'date': row[1], 'price': float(row[2])}
-            for row in reader
-        ]
-    return product_data
+        for line in reader:
+            product, date_str, price = line
+            date = datetime.datetime.strptime(date_str.strip(), '%Y-%m-%d').date()
+            if product.strip() == product_name:
+                data.append((date, float(price)))
 
-def get_price_changes(product_data: List[Dict[str, str]], product_name: str) -> List[float]:
-    one_month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
-    prices = [
-        item['price']
-        for item in product_data
-        if item['product_name'] == product_name and 
-           datetime.datetime.strptime(item['date'], '%Y-%m-%d') >= one_month_ago
-    ]
-    return prices
+    data.sort()
+    data = [item for item in data if item[0] >= last_month_date]
+    return data
+
+def analyze_price_changes(data):
+    if not data:
+        return "Немає даних за останній місяць для цього товару."
+
+    start_price = data[0][1]
+    end_price = data[-1][1]
+    price_change = end_price - start_price
+    return f"Зміна ціни: {price_change:.2f}. Початкова ціна: {start_price:.2f}, Кінцева ціна: {end_price:.2f}"
+
+# Використання скрипта:
+filename = './data.txt'
+product_name = 'Milk'
+data = read_data(filename, product_name)
+result = analyze_price_changes(data)
+print(result)
